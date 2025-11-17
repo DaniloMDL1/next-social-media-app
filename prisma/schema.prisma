@@ -1,0 +1,149 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../app/generated/prisma"
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+    id            String    @id
+    name          String
+    username      String    @unique
+    email         String
+    emailVerified Boolean   @default(false)
+    image         String?
+    bio           String?
+    location      String?
+    createdAt     DateTime  @default(now())
+    updatedAt     DateTime  @default(now()) @updatedAt
+    sessions      Session[]
+    accounts      Account[]
+
+    followings Follow[] @relation("followers")
+    followers Follow[]  @relation("followings")
+
+    posts Post[]
+    likes Like[]
+    comments Comment[]
+    savedPosts SavedPost[]
+
+    @@unique([email])
+    @@map("user")
+}
+
+model Session {
+    id        String   @id
+    expiresAt DateTime
+    token     String
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+    ipAddress String?
+    userAgent String?
+    userId    String
+    user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    @@unique([token])
+    @@map("session")
+}
+
+model Account {
+    id                    String    @id
+    accountId             String
+    providerId            String
+    userId                String
+    user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+    accessToken           String?
+    refreshToken          String?
+    idToken               String?
+    accessTokenExpiresAt  DateTime?
+    refreshTokenExpiresAt DateTime?
+    scope                 String?
+    password              String?
+    createdAt             DateTime  @default(now())
+    updatedAt             DateTime  @updatedAt
+
+    @@map("account")
+}
+
+model Verification {
+    id         String   @id
+    identifier String
+    value      String
+    expiresAt  DateTime
+    createdAt  DateTime @default(now())
+    updatedAt  DateTime @default(now()) @updatedAt
+
+    @@map("verification")
+}
+
+model Follow {
+    id String @id @default(cuid())
+    createdAt DateTime @default(now())
+
+    followerId String
+    follower User @relation("followers", fields: [followerId], references: [id])
+
+    followingId String
+    following User @relation("followings", fields: [followingId], references: [id])
+
+    @@unique([followerId, followingId])
+}
+
+model Post {
+    id String @id @default(cuid())
+    text String?
+    postImage String?
+    postImageKey String?
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    likes Like[]
+    comments Comment[]
+    savedPosts SavedPost[]
+
+    userId String
+    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Like {
+    id String @id @default(cuid())
+    createdAt DateTime @default(now())
+
+    userId String
+    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    postId String
+    post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+    @@unique([userId, postId])
+}
+
+model Comment {
+    id String @id @default(cuid())
+    text String
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    userId String
+    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    postId String
+    post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+}
+
+model SavedPost {
+    id String @id @default(cuid())
+    createdAt DateTime @default(now())
+
+    userId String
+    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    postId String
+    post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+    @@unique([userId, postId])
+}
